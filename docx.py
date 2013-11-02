@@ -75,7 +75,7 @@ class Docx(object):
     
     
     def __init__(self, template=None):
-        self._relationshiplist = []
+        self._relationshiplist = {}
         self._document = None
         self._template = template if template else self.__templatePath
         self._media = {}
@@ -107,35 +107,35 @@ class Docx(object):
     
     def _loadrels(self):
         '''Load the relationships content into our relationship list '''
-        rl = []
+        rl = {}
 
         relsPath = 'word/_rels/document.xml.rels'
         zf = zipfile.ZipFile(self._template)
-        
         if relsPath in zf.namelist():
           
             xmlcontent = zf.read(relsPath)
             rels = etree.fromstring(xmlcontent)
             
             for node in rels.getchildren():
-                rl.append([node.get('Type'), node.get('Target')])
+                id_ = int(node.get('Id')[3:])
+                rl[id_] = [node.get('Type'), node.get('Target')]
         
         else:
             # Fallback for when we're using the v0.2.1 version of the
             # default template
             rl = \
-                [['http://schemas.openxmlformats.org/officeDocument/2006/'
+                {1: ['http://schemas.openxmlformats.org/officeDocument/2006/'
                   'relationships/numbering', 'numbering.xml'],
-                 ['http://schemas.openxmlformats.org/officeDocument/2006/'
+                 2: ['http://schemas.openxmlformats.org/officeDocument/2006/'
                   'relationships/styles', 'styles.xml'],
-                 ['http://schemas.openxmlformats.org/officeDocument/2006/'
+                 3: ['http://schemas.openxmlformats.org/officeDocument/2006/'
                   'relationships/settings', 'settings.xml'],
-                 ['http://schemas.openxmlformats.org/officeDocument/2006/'
+                 4: ['http://schemas.openxmlformats.org/officeDocument/2006/'
                   'relationships/webSettings', 'webSettings.xml'],
-                 ['http://schemas.openxmlformats.org/officeDocument/2006/'
+                 5: ['http://schemas.openxmlformats.org/officeDocument/2006/'
                   'relationships/fontTable', 'fontTable.xml'],
-                 ['http://schemas.openxmlformats.org/officeDocument/2006/'
-                  'relationships/theme', 'theme/theme1.xml']]
+                 6: ['http://schemas.openxmlformats.org/officeDocument/2006/'
+                  'relationships/theme', 'theme/theme1.xml']}
                 
         self._relationshiplist = rl
     
@@ -149,8 +149,8 @@ class Docx(object):
             if not name.startswith(prefix):
                 continue
             
-            name = name[len(prefix):]
-            media[name] = zf.read(name)
+            name = name[len(prefix) + 1:]
+            media[name] = zf.read(zipInfo.filename)
             
         self._media = media
         
@@ -398,7 +398,7 @@ class Docx(object):
         paragraph.append(pr)
         paragraph.append(run)
         # Return the combined paragraph
-        self._docbody.append(paragraph)
+        self._document.append(paragraph)
     
     
     def table(self, contents, heading=True, colw=None, cwunit='dxa', tblw=0,
@@ -576,11 +576,13 @@ class Docx(object):
         height = str(pixelheight * emuperpixel)
     
         # Set relationship ID to the first available
-        picid = '2'
-        picrelid = 'rId' + str(len(self._relationshiplist) + 1)
-        self._relationshiplist.append([
+        picid = str(len(self._relationshiplist) + 1)
+        assert not picid in self._relationshiplist
+        
+        picrelid = 'rId' + picid
+        self._relationshiplist[picid] = [
             ('http://schemas.openxmlformats.org/officeDocument/2006/relationship'
-             's/image'), 'media/' + picname])
+             's/image'), 'media/' + picname]
     
         # There are 3 main elements inside a picture
         # 1. The Blipfill - specifies how the image fills the picture area
@@ -1031,10 +1033,10 @@ class Docx(object):
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006'
             '/relationships"></Relationships>')
         count = 0
-        for relationship in self._relationshiplist:
+        for id_, relationship in self._relationshiplist.items():
             # Relationship IDs (rId) start at 1.
             rel_elm = self._makeelement('Relationship', nsprefix=None,
-                                  attributes={'Id':     'rId' + str(count + 1),
+                                  attributes={'Id':     'rId%s' % id_,
                                               'Type':   relationship[0],
                                               'Target': relationship[1]}
                                   )
@@ -1074,6 +1076,11 @@ class Docx(object):
                 continue
             log.info('Saving: %s', filename)
             docxfile.writestr(filename, templateFile.read(filename))
+            
+        # Write in the media files
+        for name, data in self._media.items():
+            docxfile.writestr('word/media/%s' % name, data)
+          
         log.info('Saved new file to: %r', output)
         docxfile.close()
         
