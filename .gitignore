@@ -8,3 +8,5 @@ README.html
 _scratch
 template/word/media
 .tox
+.project
+.pydevproject
