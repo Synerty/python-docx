@@ -1,6 +1,7 @@
 .coverage
 dist
 *.docx
+!template.docx
 /*.egg-info/
 MANIFEST
 *.pyc
