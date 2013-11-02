@@ -398,7 +398,7 @@ class Docx(object):
         paragraph.append(pr)
         paragraph.append(run)
         # Return the combined paragraph
-        self._document.append(paragraph)
+        self._docbody.append(paragraph)
     
     
     def table(self, contents, heading=True, colw=None, cwunit='dxa', tblw=0,
