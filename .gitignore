@@ -10,3 +10,4 @@ template/word/media
 .tox
 .project
 .pydevproject
+.settings
