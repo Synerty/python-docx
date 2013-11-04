@@ -543,7 +543,7 @@ class Docx(object):
     def picture(self, picfilepath,
             picdescription, pixelwidth=None,
             pixelheight=None, nochangeaspect=True, nochangearrowheads=True,
-            picname=None, overwrite=False):
+            picname=None, overwrite=False, noscaleup=False):
         """
         Take a relationshiplist, picture file name, and return a paragraph
         containing the image and an updated relationshiplist.
@@ -565,9 +565,32 @@ class Docx(object):
         self._media[picname] = open(picfilepath, 'rb+').read()
         
         # Check if the user has specified a size
-        if not pixelwidth or not pixelheight:
+        origwidth, origheight = Image.open(picfilepath).size[0:2]
+
+        if not pixelwidth and not pixelheight:
             # If not, get info from the picture itself
-            pixelwidth, pixelheight = Image.open(picfilepath).size[0:2]
+            pixelwidth = origwidth
+            pixelheight = origheight
+            
+        elif not pixelwidth:
+            pixelwidth = origwidth
+
+            if origheight < pixelheight and noscaleup:
+              pixelheight = origheight
+              
+            elif nochangeaspect:
+                pixelwidth = pixelwidth * pixelheight / origheight
+            
+        elif not pixelheight:
+            pixelheight = origheight
+            
+            if origwidth < pixelwidth and noscaleup:
+              pixelwidth = origwidth
+              
+            elif nochangeaspect:
+                pixelheight = pixelheight * pixelwidth / origwidth
+          
+    
     
         # OpenXML measures on-screen objects in English Metric Units
         # 1cm = 36000 EMUs
