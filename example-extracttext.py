@@ -11,22 +11,23 @@ See LICENSE for licensing information.
 
 import sys
 
-from docx import opendocx, getdocumenttext
+from docx import Docx
 
 if __name__ == '__main__':
+    docx = None
     try:
-        document = opendocx(sys.argv[1])
+        docx = Docx(sys.argv[1])
         newfile = open(sys.argv[2], 'w')
     except:
         print(
             "Please supply an input and output file. For example:\n"
-            "  example-extracttext.py 'My Office 2007 document.docx' 'outp"
-            "utfile.txt'"
+            "  example-extracttext.py 'My Office 2007 document.docx'"
+            " 'outputfile.txt'"
         )
         exit()
 
     # Fetch all the text out of the document we just created
-    paratextlist = getdocumenttext(document)
+    paratextlist = docx.getdocumenttext()
 
     # Make explicit unicode version
     newparatextlist = []
